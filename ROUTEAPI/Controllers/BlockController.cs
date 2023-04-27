@@ -20,7 +20,9 @@ namespace ROUTEAPI.Controllers
         public async Task<Response<List<Block>>> GetAllBlocks()
         {
             var responce = new Response<List<Block>>();
-            var records = await _context.Blocks.ToListAsync();
+            var records = await _context.Blocks
+                .Include(r => r.District)
+                .ToListAsync();
             if (records != null)
             {
                 responce.Message = "Success";

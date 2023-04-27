@@ -14,5 +14,6 @@ namespace ROUTEAPI.Models
         public DbSet<City> Cities{ get; set; }
         public DbSet<District> Districts{ get; set; }
         public DbSet<Block> Blocks{ get; set; }
+        public DbSet<Citizen> Citizens { get; set; }
     }
 }

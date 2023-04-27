@@ -7,7 +7,7 @@ using ROUTEAPI.Dtos;
 
 namespace ROUTEAPI.Controllers
 {
-    //[Authorize]
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class DistrictController : ControllerBase

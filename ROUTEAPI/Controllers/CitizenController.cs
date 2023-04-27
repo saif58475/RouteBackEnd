@@ -1,5 +1,5 @@
-﻿using Managment_System.Responce;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ROUTEAPI.Dtos;
 
@@ -8,34 +8,31 @@ namespace ROUTEAPI.Controllers
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class CountryController : ControllerBase
+    public class CitizenController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        public CountryController(ApplicationDbContext context)
+        public CitizenController(ApplicationDbContext context)
         {
             _context = context;
         }
-
-
         [HttpGet]
-        [Route("~/api/Country/GetAllCountries")]
-        public async Task<Response<List<Country>>> GetAllCountries()
+        [Route("~/api/Citizen/GetAllCitizens")]
+        public async Task<Response<List<Citizen>>> GetAllCitizens()
         {
-            var responce = new Response<List<Country>>();
-            var records = await _context.Countries
-                .Include(r => r.Cities)
+            var responce = new Response<List<Citizen>>();
+            var records = await _context.Citizens
+                .Include(r => r.City)
                 .ToListAsync();
-            try
+            if ( records != null)
             {
                 responce.Message = "Success";
                 responce.MessageCode = 200;
                 responce.Data = records;
                 responce.Success = true;
             }
-            catch (Exception ex)
+            else
             {
-
-                responce.Message = ex.Message;
+                responce.Message = "Their is no records in the database";
                 responce.MessageCode = 200;
                 responce.Data = null;
                 responce.Success = true;
@@ -43,23 +40,23 @@ namespace ROUTEAPI.Controllers
             return responce;
         }
         [HttpPost]
-        [Route("~/api/Country/Create")]
-        public async Task<Response<Country>> Create([FromForm] CountryDto dto)
+        [Route("~/api/Citizen/Create")]
+        public async Task<Response<Citizen>> Create([FromForm] CitizenDto dto)
         {
-            var responce = new Response<Country>();
+            var responce = new Response<Citizen>();
             if ( dto != null)
             {
                 FileInfo imgFileInfo = new FileInfo(dto.Image.FileName);
                 string imgpath = Guid.NewGuid().ToString() + imgFileInfo.Extension;
-                string path = Path.Combine("Images/Flags", imgpath);
-                using (Stream   stream = new FileStream(path, FileMode.Create))
+                string path = Path.Combine("Images/Citizens", imgpath);
+                using (Stream stream = new FileStream(path, FileMode.Create))
                 {
                     dto.Image.CopyTo(stream);
                 }
-                var record = new Country { Name = dto.Name, PhoneCode = dto.PhoneCode, Image = path };
-                _context.Countries.Add(record);
+                Citizen record = new Citizen { Name = dto.Name, Age = dto.DOB, CityId = dto.CityId, Image = path };
+                _context.Citizens.Add(record);
                 await _context.SaveChangesAsync();
-                responce.Message = "Succcess";
+                responce.Message = "Success";
                 responce.MessageCode = 200;
                 responce.Data = record;
                 responce.Success = true;
@@ -73,34 +70,32 @@ namespace ROUTEAPI.Controllers
             }
             return responce;
         }
-
         [HttpPut]
-        [Route("~/api/Country/Update")]
-        public async Task<Response<Country>> Update(int id, [FromForm] CountryDto dto)
+        [Route("~/api/Citizen/Update")]
+        public async Task<Response<Citizen>> Update(int id, [FromForm] CitizenDto dto)
         {
-            var responce = new Response<Country>();
-            var record = _context.Countries.FirstOrDefault(r => r.Id == id);
-            if (record != null)
+            var responce = new Response<Citizen>();
+            var record = _context.Citizens.FirstOrDefault(r => r.Id == id);
+            if ( record != null )
             {
-                if ( dto.Image != null)
+                if (dto.Image != null)
                 {
                     using (Stream stream = new FileStream(record.Image, FileMode.Create))
                     {
                         dto.Image.CopyTo(stream);
                     }
                 }
-                    record.Name = dto.Name; record.PhoneCode = dto.PhoneCode;
-                
-                _context.Countries.Update(record);
+                record.Name = dto.Name; record.Age = dto.DOB; record.CityId = dto.CityId;
+                _context.Citizens.Update(record);
                 await _context.SaveChangesAsync();
-                responce.Message = "Succcess";
+                responce.Message = "Success";
                 responce.MessageCode = 200;
                 responce.Data = record;
                 responce.Success = true;
             }
             else
             {
-                responce.Message = "No Country with this id";
+                responce.Message = "Failed";
                 responce.MessageCode = 400;
                 responce.Data = null;
                 responce.Success = false;
@@ -108,55 +103,53 @@ namespace ROUTEAPI.Controllers
             return responce;
         }
         [HttpDelete]
-        [Route("~/api/Country/Delete")]
-        public async Task<Response<Country>> Delete(int id)
+        [Route("~/api/Citizen/Delete")]
+        public async Task<Response<Citizen>> Delete(int id)
         {
-            var responce = new Response<Country>();
-            var record = _context.Countries.FirstOrDefault(r => r.Id == id);
+            var responce = new Response<Citizen>();
+            var record = _context.Citizens.FirstOrDefault(r => r.Id == id);
             if ( record != null)
             {
-                _context.Countries.Remove(record);
+                _context.Citizens.Remove(record);
                 await _context.SaveChangesAsync();
-                responce.Message = "Succcess";
+                responce.Message = "Success";
                 responce.MessageCode = 200;
                 responce.Data = record;
                 responce.Success = true;
             }
             else
             {
-                responce.Message = "Their is no Country With this id";
-                responce.MessageCode = 200;
+                responce.Message = "Failed";
+                responce.MessageCode = 400;
                 responce.Data = null;
-                responce.Success = true;
+                responce.Success = false;
             }
             return responce;
         }
         [HttpGet]
-        [Route("~/api/Country/GetById")]
-        public async Task<Response<ReturnCountryDto>> GetById(int id)
+        [Route("~/api/Citizen/GetById")]
+        public async Task<Response<Citizen>> GetById(int id)
         {
-            var responce = new Response<ReturnCountryDto>();
-            var record = _context.Countries
-                .Include(r => r.Cities)
+            var responce = new Response<Citizen>();
+            var record = _context.Citizens
+                .Include(r => r.City)
+                .Include(c => c.City.Country)
                 .FirstOrDefault(r => r.Id == id);
-            ReturnCountryDto Country = new ReturnCountryDto { Id = record.Id, Name = record.Name, Image = record.Image, PhoneCode = record.PhoneCode, Cities = record.Cities };
             if (record != null)
             {
-                responce.Message = "Succcess";
+                responce.Message = "Success";
                 responce.MessageCode = 200;
-                responce.Data = Country;
+                responce.Data = record;
                 responce.Success = true;
             }
             else
             {
-                responce.Message = "Their is no Country With this id";
-                responce.MessageCode = 200;
+                responce.Message = "Failed";
+                responce.MessageCode = 400;
                 responce.Data = null;
-                responce.Success = true;
+                responce.Success = false;
             }
             return responce;
         }
-
     }
-   
 }
